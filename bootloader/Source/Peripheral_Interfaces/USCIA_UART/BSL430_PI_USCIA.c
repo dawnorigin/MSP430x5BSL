@@ -91,7 +91,7 @@ Version 0x53
 5.18.10  LCW   made buffer size unsized to align with Interface
 --------------------------------------------------------------------------------
 Version 0x54 
-7.18.15  SX    changed to UCA1 from UCA0
+7.18.15  SX    changed from UCA0 to UCA1
 --------------------------------------------------------------------------------
 *******************************************************************************/
 //errors
@@ -129,7 +129,12 @@ __no_init unsigned int BSL430_BufferSize;
 __no_init char RAM_Buf[MAX_BUFFER_SIZE];
 
 #define USCIA_VERSION 0x04
+#ifdef __DEBUG__
+const unsigned char BSL430_PI_Version = (BSL430_USCIA_PI+USCIA_VERSION);
+#else
 const unsigned char BSL430_PI_Version @ "BSL430_VERSION_PI" = (BSL430_USCIA_PI+USCIA_VERSION);
+#endif
+
 #pragma required=BSL430_PI_Version
 
 /*******************************************************************************
@@ -143,14 +148,24 @@ void PI_init()
   BSL430_ReceiveBuffer = RAM_Buf;
   BSL430_SendBuffer = RAM_Buf;
 
-  UCSCTL4 = SELA__REFOCLK + SELM__DCOCLK + SELS__DCOCLK;  // to do check SELA
+  UCSCTL4 = SELA__XT1CLK + SELM__DCOCLK + SELS__DCOCLK;  // to do check SELA
+  
+//  XT2SEL_PORT |= XT2SEL_PINS;
+//  UCSCTL6 &= ~(XT2OFF | XT2DRIVE_3);  // enable XT2
+//  UCSCTL6 |= (XT2DRIVE_2);               // Set XT2Drive
+//  UCSCTL6 &= ~XT2BYPASS;
+//  while (UCSCTL7 & XT2OFFG) {   // check OFIFG fault flag
+//      UCSCTL7 &= ~(XT2OFFG); // Clear OSC flaut Flags
+//      SFRIFG1 &= ~OFIFG;        // Clear OFIFG fault flag
+//  }
+//  UCSCTL4 = SELA__XT1CLK + SELM__DCOCLK + SELS__XT2CLK;
   
   UCSCTL0 = 0x000;                          // Set DCO to lowest Tap
   
   UCSCTL1 = DCORSEL_4;                      // 8MHz nominal DCO
   UCSCTL5 = DIVM_0 + DIVS_0;
   UCSCTL2 = FLLD_2 | (((DCO_SPEED/ACLK_SPEED)/4) - 1); // 8MHz
-
+  
   init_USCI( BAUD_9600 );
   
 }//init
@@ -270,7 +285,7 @@ void PI_sendData(int size)
 *******************************************************************************/
 void sendByte(char data)
 {
-  while (!(UCA1IFG&UCTXIFG));             // USCI_A0 TX buffer ready?
+  while (!(UCA1IFG&UCTXIFG));             // USCI_A1 TX buffer ready?
   UCA1TXBUF = data;
 }
 /*******************************************************************************
@@ -331,7 +346,7 @@ void interpretPI_Command()
     else
     {
       sendByte(ACK);
-      while(UCA0STAT&UCBUSY);
+      while(UCA1STAT&UCBUSY);
       init_USCI( rate );
     }
   }
@@ -344,8 +359,8 @@ void interpretPI_Command()
 void init_USCI( char baud_rate )
 {
   UCA1CTL1 |= UCSWRST;                      // **Put state machine in reset**
-  UCA1CTL0 |= UCPEN+UCPAR;                  // even parity
   UCA1CTL1 |= UCSSEL__SMCLK;                // SMCLK
+  UCA1CTL0 |= UCPEN + UCPAR;                  // even parity
   switch ( baud_rate )
   {
     case BAUD_9600:
@@ -369,6 +384,7 @@ void init_USCI( char baud_rate )
       UCA1MCTL = UCBRS_4 + UCBRF_0;            // Modulation   
     break; 
   }
-  //USCI_PORT_SEL = RXD + TXD;                // P1.5.6 = USCI_A0 TXD/RXD
+  TX_PORT_SEL |= TXD;                       // USCI_A1 TXD
+  RX_PORT_SEL |= RXD;                       // USCI_A1 RXD
   UCA1CTL1 &= ~UCSWRST;                     // **Initialize USCI state machine**
 }

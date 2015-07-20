@@ -129,9 +129,13 @@ extern __no_init char* BSL430_ReceiveBuffer;
 extern __no_init char* BSL430_SendBuffer;
 extern __no_init unsigned int BSL430_BufferSize;
 
+#ifdef __DEBUG__
+const unsigned char BSL430_Vendor_Version = 0x00;
+const unsigned char BSL430_CI_Version = 0x08;
+#else
 const unsigned char BSL430_Vendor_Version @ "BSL430_VERSION_VENDOR" = 0x00;
 const unsigned char BSL430_CI_Version @ "BSL430_VERSION_CI" = 0x08;
-
+#endif
 /*******************************************************************************
 * *Function:    main
 * *Description: Initializes the BSL Command Interpreter and begins listening for
@@ -143,10 +147,20 @@ void main(void)
 {
     unsigned char eventFlags = 0;
     volatile int i, ii;
-
-    BSL430_API_RAM_Clear(); // Moved from BSL430_API_init() into independent function
+    // Moved from BSL430_API_init() into independent function
+    BSL430_API_RAM_Clear(); 
     BSL430_API_init();
     PI_init();
+    
+#ifdef __MSPEXP430F5529LP__
+    P1DIR |= BIT0;
+    P1OUT |= BIT0;
+#elif defined (__EXP430F5529__)
+    P8DIR |= BIT1;
+    P8OUT |= BIT1;
+#else
+    #warning "Do not define board"
+#endif
     
     while (1)
     {

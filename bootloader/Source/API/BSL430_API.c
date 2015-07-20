@@ -149,7 +149,13 @@ __no_init int FwRamKey;
 #else
 #    define API_V API_VERSION
 #endif
+
+#ifdef __DEBUG__
+const unsigned char BSL430_API_Version = API_V;
+#else
 const unsigned char BSL430_API_Version @ "BSL430_VERSION_API" = API_V;
+#endif
+
 #pragma required=BSL430_API_Version
 
 /*******************************************************************************

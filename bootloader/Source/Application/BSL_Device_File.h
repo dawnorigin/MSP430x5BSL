@@ -77,24 +77,64 @@
  *  13.	Entire Agreement.  This is the entire Agreement between you and TI and this Agreement supersedes any prior agreement between the parties related to the subject matter of this Agreement.  Notwithstanding the foregoing, any signed and effective software license agreement relating to the subject matter hereof and stating expressly that such agreement shall control regardless of any subsequent click-wrap, shrink-wrap or web-wrap, shall supersede the terms of this Agreement.  No amendment or modification of this Agreement will be effective unless in writing and signed by a duly authorized representative of TI.  You hereby warrant and represent that you have obtained all authorizations and other applicable consents required empowering you to enter into this Agreement.
  *  
  * --/COPYRIGHT--*/
-#include "msp430x54xA.h"
-//#include "intrinsics.h"
+#include "msp430.h"
+// Vendor ID (VID) for device, TI (MSP430)=0x2047
+//    You can use is only in this example.
+//    You can order your own VID at www.usb.org
+#define USB_VID 0x2047         // Vendor ID, 0x2047 for Texas Instruments Incorporated (MSP430 Group)
+
+#define USB_PID 0x0200         // Product ID (PID), 0x0200 for F552x HID BSL stack
+
+// The following defines are here so that the supported crystals can be 
+// both easily seen, and changed without having to recompute any TBCCR6 values
+// When changing these values, be sure to also change the matching SPEED_x_PLL values
+// NOTE: Speeds must be in order from highest to lowest!
+// NOTE: If only one external frequency is used, 
+//       all SPEED_x_PLL values must be changed to that value!
+
+//24MHz will be detected
+#define SPEED_1          24000000
+#define SPEED_1_PLL      USBPLL_SETCLK_24_0;
+
+//12MHz will be detected
+#define SPEED_2          12000000
+#define SPEED_2_PLL      USBPLL_SETCLK_12_0;
+
+//8MHz will be detected
+#define SPEED_3          8000000
+#define SPEED_3_PLL      USBPLL_SETCLK_8_0;
+
+//4MHz will be detected
+#define SPEED_4          4000000
+#define SPEED_4_PLL      USBPLL_SETCLK_4_0;
 
 //Device Specific Definitions
 #define MASS_ERASE_DELAY 0x8000
 #define INTERRUPT_VECTOR_START 0xFFE0
 #define INTERRUPT_VECTOR_END   0xFFFF
 #define SECURE_RAM_START 0x1C00
-
-
-#define TX_PORT_SEL P1SEL
-#define TX_PORT_DIR P1DIR
-#define RX_PORT_SEL P1SEL
-#define RX_PORT_DIR P1DIR
-#define RXD       BIT2                      // RXD on P1.2 
-#define TXD       BIT1                      // TXD on P1.1
+//******************* CHANGE BASED ON RAM/FLASH
 #define DCO_SPEED 8000000
 #define ACLK_SPEED 32768
+
+// UART defines
+#if defined (__MSP430F5438A__)
+  #define TX_PORT_SEL P5SEL
+  #define TX_PORT_DIR P5DIR
+  #define RX_PORT_SEL P5SEL
+  #define RX_PORT_DIR P5DIR
+  #define RXD       BIT7                      // RXD on P5.7 
+  #define TXD       BIT6                      // TXD on P5.6
+#elif defined (__MSP430F5529__)
+  #define TX_PORT_SEL P4SEL
+  #define TX_PORT_DIR P4DIR
+  #define RX_PORT_SEL P4SEL
+  #define RX_PORT_DIR P4DIR
+  #define RXD       BIT5                      // RXD on P4.5 
+  #define TXD       BIT4                      // TXD on P4.4
+#endif
+
+
 
 #define TZNCCTL_TX TA0CCTL0
 #define TZNCCTL_RX TA0CCTL1
@@ -104,8 +144,26 @@
 #define TZ_CLK_SEL TASSEL_2
 #define TZNR       TA0R
 
+// USB Defines
+#define TIMER_CTL           TBCTL
+#define TIMER_CTL_SETTINGS  TBSSEL_2 + MC_2
+#define TIMER_CTL_CLR       TBCLR
+
+#define TIMER_CCTL          TBCCTL6
+#define TIMER_CCTL_SETTINGS CM_1 + CCIS_1+ CAP
+#define TIMER_CCTL_IFG      CCIFG
+#define TIMER_CCTL_CM       CM_1
+
+#define TIMER_CCR           TBCCR6
+
+#define XT2SEL_PORT         P5SEL
+#define XT2SEL_PINS         (BIT2 + BIT3)
+//Device Specific Definitions
+
 //Device Specific Definitions for commands and bugs
+//#define RAM_WRITE_ONLY_BSL 0x80
 #define FULL_FLASH_BSL
+//#define RAM_BASED_BSL      1
 #define DO_NOT_CHECK_VPE
 
 // standard command includes
